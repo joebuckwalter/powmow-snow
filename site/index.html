@@ -1,0 +1,577 @@
+<title>Powmow Snow Desk</title>
+<meta charset="utf-8">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an instrument-panel desk. Header strip, then stacked sections that each answer one question
+   (what is on the ground, what did it just do, what is coming, how do I get there, where did this come from). */
+:root {
+  --bg: #eef2f5;
+  --surface: #ffffff;
+  --surface-2: #f5f8fa;
+  --ink: #12202b;
+  --ink-2: #4d5f6d;
+  --ink-3: #75858f;
+  --line: #d6dee4;
+  --accent: #1b6fb8;
+  --accent-ink: #ffffff;
+  --good: #1b7f4b;   --good-bg: #e3f3ea;
+  --warn: #9a6200;   --warn-bg: #fbefd2;
+  --crit: #b3261e;   --crit-bg: #fbe3e1;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6;
+  --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d151b; --surface: #141f27; --surface-2: #19262f; --ink: #e8eef2; --ink-2: #a5b5c0; --ink-3: #7f909c;
+    --line: #26353f; --accent: #5aa9e6; --accent-ink: #08131b;
+    --good: #5fd29a; --good-bg: #123325; --warn: #f0be5c; --warn-bg: #3a2b0c; --crit: #ff8f86; --crit-bg: #3d1a18;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d151b; --surface: #141f27; --surface-2: #19262f; --ink: #e8eef2; --ink-2: #a5b5c0; --ink-3: #7f909c;
+  --line: #26353f; --accent: #5aa9e6; --accent-ink: #08131b;
+  --good: #5fd29a; --good-bg: #123325; --warn: #f0be5c; --warn-bg: #3a2b0c; --crit: #ff8f86; --crit-bg: #3d1a18;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
+.wrap { max-width: 1040px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; margin: 0; text-wrap: balance; letter-spacing: .01em; }
+.num { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--f-data); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+a { color: var(--accent); }
+a:focus-visible, summary:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; padding-block: 28px 18px; }
+.top h1 { font-size: clamp(34px, 7vw, 52px); line-height: .95; text-transform: uppercase; }
+.top .sub { color: var(--ink-2); margin-top: 6px; }
+.fresh { display: flex; flex-wrap: wrap; gap: 4px 18px; font-family: var(--f-data); font-size: 11.5px; color: var(--ink-3); }
+.fresh b { color: var(--ink-2); font-weight: 500; }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--f-data); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 99px; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+.pill.good { background: var(--good-bg); color: var(--good); border-color: transparent; }
+.pill.warn { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+.pill.crit { background: var(--crit-bg); color: var(--crit); border-color: transparent; }
+.pill i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; }
+
+/* status banner */
+.banner { display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
+.banner .msg { color: var(--ink-2); min-width: 0; }
+@media (max-width: 560px) { .banner { grid-template-columns: 1fr; } }
+
+section { margin-top: 28px; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; margin-bottom: 10px; }
+.sec-head h2 { font-size: 26px; text-transform: uppercase; }
+.sec-head p { margin: 0; color: var(--ink-3); font-size: 13px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; min-width: 0; }
+.grid { display: grid; gap: 14px; }
+.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 760px) { .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g2 { grid-template-columns: minmax(0, 1fr); } }
+
+.stat .label { font-family: var(--f-data); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.stat .val { font-family: var(--f-display); font-weight: 600; font-size: 44px; line-height: 1.05; margin-top: 4px; }
+.stat .val small { font-size: 18px; color: var(--ink-2); font-weight: 500; margin-left: 3px; }
+.stat .note { color: var(--ink-3); font-size: 12.5px; margin-top: 2px; }
+
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-family: var(--f-data); font-weight: 500; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+td.num { font-size: 13px; }
+tr.sum td { background: var(--surface-2); font-weight: 600; }
+.scroll { overflow-x: auto; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: -1px; }
+.muted { color: var(--ink-3); }
+.cell-hi { color: var(--accent); font-weight: 600; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 8px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font-family: var(--f-data); font-size: 11px; fill: var(--ink-3); }
+.chart .lbl { fill: var(--ink-2); font-size: 11.5px; }
+.tip { position: absolute; pointer-events: none; z-index: 5; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; box-shadow: 0 4px 16px rgba(0,0,0,.14); min-width: 120px; }
+.tip b { display: block; font-family: var(--f-data); font-weight: 500; font-size: 11px; color: var(--ink-3); margin-bottom: 4px; }
+.tip div { display: flex; justify-content: space-between; gap: 14px; }
+.tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+/* OpenSnow-style daily strip: past 15 days measured, next 15 days forecast, AM and PM half bars */
+.strip-scroll { overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+.strip-inner { position: relative; }
+.grp-row, .cols { display: grid; grid-template-columns: repeat(30, 56px); }
+.grp { grid-column: span 5; border-left: 1px solid var(--line); padding: 0 0 6px 0; min-width: 0; }
+.grp:first-child { border-left: 0; }
+.grp-in { position: sticky; left: 0; display: inline-flex; flex-direction: column; padding: 2px 10px 0 8px; }
+.grp-in .gl { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.grp-in .gv { font-family: var(--f-display); font-weight: 600; font-size: 26px; line-height: 1.1; }
+.grp.obs .gv { color: var(--accent); } .grp.fc .gv { color: var(--s7); }
+.col { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; align-items: center; padding: 4px 0 6px; border-radius: 8px; width: 56px; -webkit-tap-highlight-color: transparent; }
+.col:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.col.today { background: var(--surface-2); }
+.col.sel { box-shadow: inset 0 0 0 2px var(--ink-2); }
+.col .bars { height: 138px; display: flex; align-items: flex-end; justify-content: center; gap: 3px; width: 100%; }
+.col .half { width: 20px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+.col .v { font-family: var(--f-data); font-size: 10.5px; line-height: 14px; color: var(--ink-2); white-space: nowrap; }
+.col .b { width: 100%; min-height: 2px; border-radius: 3px 3px 0 0; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+.col .b i { display: block; width: 100%; }
+.col .b.zero { background: var(--line); height: 2px; border-radius: 0; }
+.col .b.none { background: none; border-top: 2px dotted var(--line); height: 2px; border-radius: 0; }
+.col .ab { display: flex; justify-content: center; gap: 3px; width: 100%; font-family: var(--f-data); font-size: 9px; color: var(--ink-3); margin-top: 3px; }
+.col .ab span { width: 20px; text-align: center; }
+.col .dl { margin-top: 4px; text-align: center; font-family: var(--f-data); font-size: 11.5px; line-height: 1.25; color: var(--ink-2); }
+.col .dl b { display: block; font-size: 13px; font-weight: 500; }
+.col.wk .dl, .col.wk .dl b { font-weight: 600; color: var(--ink); }
+.col.today .dl b { color: var(--accent); }
+.detail { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+.detail h3 { font-size: 22px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.detail .hv { font-family: var(--f-display); font-size: 40px; font-weight: 600; line-height: 1.05; }
+.detail .hv small { font-size: 16px; color: var(--ink-2); font-weight: 500; margin-left: 3px; }
+.detail .lines { color: var(--ink-2); font-size: 13.5px; margin: 4px 0 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 12.5px; color: var(--ink-2); }
+.chips span { display: inline-flex; align-items: center; gap: 5px; }
+.chips i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.callout { border-left: 3px solid var(--warn); background: var(--warn-bg); color: var(--ink); padding: 10px 14px; border-radius: 0 8px 8px 0; margin-top: 12px; font-size: 14px; }
+.callout b { font-weight: 600; }
+
+.periods { display: grid; gap: 0; }
+.period { display: grid; grid-template-columns: 130px minmax(0, 1fr) 70px 90px; gap: 4px 14px; padding: 9px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.period:last-child { border-bottom: 0; }
+.period .n { font-family: var(--f-display); font-weight: 600; font-size: 18px; }
+.period .s { color: var(--ink-2); min-width: 0; }
+.period .t { font-family: var(--f-data); text-align: right; }
+.period .w { font-family: var(--f-data); font-size: 12px; color: var(--ink-3); text-align: right; }
+@media (max-width: 560px) { .period { grid-template-columns: minmax(0,1fr) auto; } .period .s { grid-column: 1 / -1; order: 3; } .period .w { display: none; } }
+
+.keymsg { margin: 0; padding-left: 18px; color: var(--ink-2); }
+.keymsg li { margin: 4px 0; }
+details { margin-top: 10px; }
+summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+details p { color: var(--ink-2); margin: 8px 0 0; max-width: 72ch; }
+
+.cam { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 760px) { .cam { grid-template-columns: minmax(0, 1fr); } }
+.cam img { width: 100%; height: auto; border-radius: 8px; display: block; background: var(--surface-2); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; margin: 0; }
+.kv dt { color: var(--ink-3); } .kv dd { margin: 0; }
+
+.src td, .src th { white-space: normal; text-align: left; vertical-align: top; }
+.src td:first-child { white-space: nowrap; font-weight: 500; }
+.gap { color: var(--ink-2); }
+footer { margin-top: 28px; color: var(--ink-3); font-size: 12.5px; max-width: 80ch; }
+</style>
+
+<div class="wrap" id="app"></div>
+
+<script>
+fetch("data.json?_=" + Date.now()).then((r) => r.json()).then(function (D) {
+  const $ = (s, el) => (el || document).querySelector(s);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const f1 = (n) => (n == null ? "—" : (Math.round(n * 10) / 10).toFixed(1));
+  const f0 = (n) => (n == null ? "—" : Math.round(n).toString());
+  const SCOLORS = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)", "var(--s5)", "var(--s6)"];
+  const MODEL_ORDER = ["gfs_seamless", "ecmwf_ifs025", "ecmwf_aifs025_single", "icon_seamless", "gem_seamless", "ncep_hrrr_conus"];
+  const MCOLOR = {}; MODEL_ORDER.forEach((k, i) => (MCOLOR[k] = SCOLORS[i]));
+  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const dateLabel = (iso) => { const [y, m, d] = iso.slice(0, 10).split("-").map(Number); return MON[m - 1] + " " + d; };
+  const dowLabel = (iso) => { const [y, m, d] = iso.slice(0, 10).split("-").map(Number); return DOW[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] + " " + d; };
+  const denver = (iso, opts) => new Date(iso).toLocaleString("en-US", Object.assign({ timeZone: "America/Denver" }, opts));
+  const stamp = (iso) => (iso ? denver(iso, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—");
+  const hasErr = (o) => !o || o.error;
+
+  const S = D.snotel, N = D.nws, M = D.models, R = D.resort, C = D.cams;
+  const html = [];
+
+  /* ---------- header + banner ---------- */
+  const lifts = !hasErr(R) ? R.lifts : null;
+  const open = lifts && lifts.openLifts > 0;
+  html.push(`
+  <header class="top">
+    <div>
+      <div class="eyebrow">Eden, Utah · 41.38 N 111.76 W · 8,025 ft</div>
+      <h1>Powder Mountain</h1>
+      <div class="sub">Free-source conditions and forecast desk. Prototype snapshot.</div>
+    </div>
+    <div class="fresh">
+      <span>Pulled <b>${stamp(D.generated)}</b></span>
+      <span>SNOTEL <b>${S && !S.error ? S.current.t.replace("T", " ") : "—"}</b></span>
+      <span>NWS grid <b>${!hasErr(N) ? stamp(N.updated) : "—"}</b></span>
+      <span>Resort <b>${!hasErr(R) ? stamp(R.updated) : "—"}</b></span>
+    </div>
+  </header>`);
+
+  if (!hasErr(R)) {
+    html.push(`
+  <div class="banner">
+    <div><span class="pill ${open ? "good" : "crit"}"><i></i>${open ? "Lifts running" : "Resort closed"}</span></div>
+    <div class="msg">${esc(R.daily_message || "No resort message today.")}</div>
+  </div>`);
+  }
+
+  /* ---------- section: on the ground ---------- */
+  if (!hasErr(S)) {
+    const c = S.current;
+    const alertPill = !hasErr(N) ? (N.alerts.length
+      ? N.alerts.map((a) => `<span class="pill warn"><i></i>${esc(a.event)}</span>`).join(" ")
+      : `<span class="pill good"><i></i>No NWS alerts</span>`) : "";
+    html.push(`
+  <section>
+    <div class="sec-head"><h2>On the ground</h2><p>SNOTEL site 1300 at ~8,490 ft, the resort report, and the roads. ${alertPill}</p></div>
+    <div class="grid g4">
+      <div class="panel stat"><div class="label">Snow depth</div><div class="val num">${f0(c.depth_in)}<small>in</small></div><div class="note">Sensor reading, whole inches</div></div>
+      <div class="panel stat"><div class="label">Water in snowpack</div><div class="val num">${f1(c.swe_in)}<small>in</small></div><div class="note">Snow water equivalent</div></div>
+      <div class="panel stat"><div class="label">Station air temp</div><div class="val num">${f0(c.temp_f)}<small>°F</small></div><div class="note">Known sensor bias, see sources</div></div>
+      <div class="panel stat"><div class="label">Precip since Oct 1</div><div class="val num">${f1(c.water_year_prec_in)}<small>in</small></div><div class="note">Liquid, water year to date</div></div>
+    </div>
+  </section>`);
+  }
+
+  /* ---------- section: daily snow strip ---------- */
+  const DS = D.daily_snow;
+  if (!hasErr(DS)) {
+    html.push(`
+  <section>
+    <div class="sec-head"><h2>Snow summary</h2><p>Inches per half-day. Past 15 days measured, next 15 days forecast. Tap a day for details.</p></div>
+    <div class="panel">
+      <div class="legend"><span><i style="background:var(--accent)"></i>Measured at the SNOTEL station</span><span><i style="background:var(--s7)"></i>Forecast, model average</span><span class="muted">A = midnight to noon, P = noon to midnight</span></div>
+      <div class="strip-scroll" id="strip" tabindex="-1"></div>
+      <div class="detail" id="strip-detail" aria-live="polite"></div>
+    </div>
+  </section>`);
+  }
+
+  /* ---------- section: observed ---------- */
+  if (!hasErr(S)) {
+    const w = S.windows;
+    const row = (lab, k) => `<tr><td>${lab}</td><td class="num">${f1(w[k].liquid_in)}</td><td class="num">${w[k].depth_change_in > 0 ? "+" : ""}${f1(w[k].depth_change_in)}</td></tr>`;
+    html.push(`
+  <section>
+    <div class="sec-head"><h2>Station detail</h2><p>Hourly SNOTEL readings, last 7 days. Drag across a chart to read a value.</p></div>
+    <div class="grid" style="grid-template-columns:minmax(0,2.2fr) minmax(0,1fr)" id="obsgrid">
+      <div class="panel">
+        <div class="legend"><span><i style="background:var(--s1)"></i>Snow depth (in)</span><span><i style="background:var(--s3)"></i>Snow water equivalent (in)</span></div>
+        <div class="chart" id="ch-snow"></div>
+        <div class="legend" style="margin-top:12px"><span><i style="background:var(--s2)"></i>Air temperature (°F), dashed line is 32°F</span></div>
+        <div class="chart" id="ch-temp"></div>
+      </div>
+      <div class="panel scroll">
+        <table>
+          <thead><tr><th>Window</th><th>Liquid in</th><th>Depth in</th></tr></thead>
+          <tbody>${row("24 h", "24h")}${row("48 h", "48h")}${row("72 h", "72h")}${row("7 days", "7d")}</tbody>
+        </table>
+        <p class="muted" style="font-size:12.5px;margin:10px 0 0">Liquid is the change in the station's precipitation gauge. Depth is the change in the snow sensor, which reports whole inches and is not a snowfall measurement. One-hour spikes in the depth line are sensor noise, left in because the data is shown unedited. About 1 in of liquid on cold snow is roughly 10 in of snow, but ratios vary a lot.</p>
+      </div>
+    </div>
+  </section>`);
+  }
+
+  /* ---------- section: forecast ---------- */
+  if (!hasErr(M)) {
+    const ms = MODEL_ORDER.filter((k) => M.models[k] && M.models[k].snow_in);
+    const cell = (v) => (v == null ? '<span class="muted">—</span>' : f1(v));
+    const rows = ms.map((k) => {
+      const m = M.models[k], s = m.snow_in;
+      return `<tr><td><span class="dot" style="background:${MCOLOR[k]}"></span>${esc(m.label)}</td>
+        <td class="num">${cell(s["24h"])}</td><td class="num">${cell(s["48h"])}</td><td class="num">${cell(s["5d"])}</td><td class="num">${cell(s["7d"])}</td><td class="num">${cell(s["10d"])}</td>
+        <td class="num ${m.total_in >= 2 ? "cell-hi" : ""}">${f1(m.total_in)}</td><td class="num muted">${f1(m.horizon_days)} d</td></tr>`;
+    }).join("");
+    const sp = M.spread;
+    const spCell = (k) => (sp[k] && sp[k].n >= 2 ? `${f1(sp[k].min)}–${f1(sp[k].max)}` : "—");
+    const nwsRow = !hasErr(N) ? `<tr><td><span class="dot" style="background:var(--ink-3)"></span>NWS forecaster grid</td>
+        <td class="num">${f1(N.snow_totals_in["24h"])}</td><td class="num">${f1(N.snow_totals_in["48h"])}</td><td class="num">${f1(N.snow_totals_in["5d"])}</td><td class="num">${f1(N.snow_totals_in["7d"])}</td><td class="num muted">—</td><td class="num muted">—</td><td class="num muted">7 d</td></tr>` : "";
+    const os = !hasErr(R) && R.opensnow_via_resort ? R.opensnow_via_resort.next_5d_snow_in : null;
+    const osRow = os ? `<tr><td><span class="dot" style="background:var(--ink-3)"></span>OpenSnow, via resort site</td>
+        <td class="num muted">—</td><td class="num muted">—</td><td class="num">${f0(os.precipSnowMin)}–${f0(os.precipSnowMax)}</td><td class="num muted">—</td><td class="num muted">—</td><td class="num muted">—</td><td class="num muted">5 d</td></tr>` : "";
+
+    // storm signal, computed in fetch.py
+    const sig = ms.filter((k) => M.models[k].first_day_1in).map((k) => ({ label: M.models[k].label, day: M.models[k].first_day_1in, tot: M.models[k].total_in }));
+    const callout = sig.length >= 2
+      ? `<div class="callout"><b>${sig.length} long-range models show snow late in the run.</b> ${sig.map((s) => `${esc(s.label)} first has 1 in or more on ${dateLabel(s.day)} (${f1(s.tot)} in total)`).join("; ")}. That is more than 10 days out, so treat the amounts as a hint about timing, not a forecast.</div>`
+      : "";
+
+    html.push(`
+  <section>
+    <div class="sec-head"><h2>What is coming</h2><p>Snowfall in inches at the resort point, 8,025 ft. Each model runs a different distance ahead.</p></div>
+    <div class="panel">
+      <div class="legend" id="leg-models">${ms.map((k) => `<span><i style="background:${MCOLOR[k]}"></i>${esc(M.models[k].label)}</span>`).join("")}</div>
+      <div class="chart" id="ch-models"></div>
+      <div style="font-size:12px;color:var(--ink-3);margin-top:4px">Running total of forecast snowfall by day. Lines stop where each model's run ends.</div>
+      ${callout}
+    </div>
+    <div class="panel scroll" style="margin-top:14px">
+      <table>
+        <thead><tr><th>Source</th><th>24 h</th><th>48 h</th><th>5 d</th><th>7 d</th><th>10 d</th><th>Full run</th><th>Reaches</th></tr></thead>
+        <tbody>
+          ${rows}
+          <tr class="sum"><td>Spread, min–max</td><td class="num">${spCell("24h")}</td><td class="num">${spCell("48h")}</td><td class="num">${spCell("5d")}</td><td class="num">${spCell("7d")}</td><td class="num">${spCell("10d")}</td><td class="num muted">—</td><td></td></tr>
+          ${nwsRow}${osRow}
+        </tbody>
+      </table>
+      <p class="muted" style="font-size:12.5px;margin:10px 0 0">A dash means that model's run ends before that window. Spread is shown only when at least two models reach it. ${esc(M.note)}</p>
+    </div>
+  </section>`);
+  }
+
+  /* ---------- section: NWS ---------- */
+  if (!hasErr(N)) {
+    const per = N.periods.slice(0, 10).map((p) => `
+      <div class="period"><div class="n">${esc(p.name)}</div><div class="s">${esc(p.short)}</div>
+      <div class="t">${p.temp}°${esc(p.unit)}</div><div class="w">${esc(p.wind)}${p.pop != null ? " · " + p.pop + "%" : ""}</div></div>`).join("");
+    const km = N.afd.sections["KEY MESSAGES"], disc = N.afd.sections["DISCUSSION"];
+    const bullets = km ? km.split(/\s-\s|^-\s/).map((s) => s.trim()).filter(Boolean) : [];
+    html.push(`
+  <section>
+    <div class="sec-head"><h2>Forecaster notes</h2><p>National Weather Service, Salt Lake City. Free and written by people.</p></div>
+    <div class="grid g2">
+      <div class="panel"><div class="eyebrow" style="margin-bottom:6px">Grid forecast, point at ${N.grid_elev_ft.toLocaleString()} ft</div><div class="periods">${per}</div></div>
+      <div class="panel">
+        <div class="eyebrow" style="margin-bottom:8px">Area forecast discussion · issued ${stamp(N.afd.issued)}</div>
+        <ul class="keymsg">${bullets.map((b) => `<li>${esc(b)}</li>`).join("")}</ul>
+        ${disc ? `<details><summary>Full discussion</summary><p>${esc(disc)}</p></details>` : ""}
+        <p style="margin:12px 0 0;font-size:13px"><a href="${esc(N.afd.url)}" target="_blank" rel="noopener">Open the original at weather.gov</a></p>
+      </div>
+    </div>
+  </section>`);
+  }
+
+  /* ---------- section: getting there ---------- */
+  if (!hasErr(R)) {
+    const cams = (C || []).filter((c) => c.img);
+    const ageLabel = (c) => {
+      if (c.age_min == null) return "road cam, current at pull time";
+      if (c.age_min < 90) return c.age_min + " min old";
+      const h = Math.round(c.age_min / 6) / 10; return h + " h old";
+    };
+    const camCard = (c) => `<figure style="margin:0;min-width:0">
+        <img alt="${esc(c.name)} camera" src="${esc(c.img)}?v=${esc(D.generated)}">
+        <figcaption style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;margin-top:6px;font-size:13px">
+          <b style="font-weight:600">${esc(c.name)}</b>
+          <span><span class="pill ${c.stale ? "warn" : "good"}"><i></i>${c.stale ? "Offline" : "Live"}</span> <span class="muted num" style="font-size:11.5px">${esc(ageLabel(c))}${c.taken_local ? " · " + esc(c.taken_local.slice(5, 16).replace("-", "/").replace(" ", " ")) : ""}</span></span>
+        </figcaption></figure>`;
+    if (cams.length) html.push(`
+  <section>
+    <div class="sec-head"><h2>Cameras</h2><p>Frames saved at pull time. Mountain cams come from the PrismCam widget on the resort site; the road cam is UDOT.</p></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))">${cams.map((c) => `<div class="panel" style="padding:10px">${camCard(c)}</div>`).join("")}</div>
+    <p class="muted" style="font-size:12.5px;margin:8px 0 0">No snow-stake camera is listed in the resort's camera feed right now. Offline means the newest frame is more than 3 hours old, which is expected for a night camera.</p>
+  </section>`);
+    const roads = R.roads.map((r) => `<dt>${esc(r.name)} (SR-${esc(r.route)})</dt><dd><span class="pill ${r.open ? "good" : "crit"}"><i></i>${r.open ? "Open" : "Closed"}</span> <span class="muted">${esc(r.surface.replace(/_/g, " ").toLowerCase())}, ${r.equipment === "NORM" ? "no traction rules" : esc(r.equipment)}</span></dd>`).join("");
+    const parking = R.parking.map((p) => `<dt>${esc(p.name)}</dt><dd>${esc(p.status.replace(/_/g, " ").toLowerCase())}${p.note ? ` <span class="muted">· ${esc(p.note)}</span>` : ""}</dd>`).join("");
+    html.push(`
+  <section>
+    <div class="sec-head"><h2>Getting there</h2><p>Road, parking, lifts and terrain.</p></div>
+    <div class="panel grid g2">
+      <div>
+        <div class="eyebrow" style="margin-bottom:8px">Roads</div>
+        <dl class="kv">${roads}</dl>
+        <div class="eyebrow" style="margin:16px 0 8px">Parking · resort update ${stamp(R.updated)}</div>
+        <dl class="kv">${parking}</dl>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:8px">Lifts and terrain</div>
+        <dl class="kv"><dt>Lifts open</dt><dd class="num">${R.lifts.openLifts} of ${R.lifts.lifts}</dd><dt>Trails open</dt><dd class="num">${R.trails.openTrails} of ${R.trails.totalTrails}</dd><dt>Resort 7-day snow</dt><dd class="num">${f0(R.snow_report.freshSnowFallDepth7D)} in <span class="muted">(report last edited ${R.snow_report_modified ? R.snow_report_modified.slice(0, 10) : "—"})</span></dd></dl>
+      </div>
+    </div>
+  </section>`);
+  }
+
+  /* ---------- section: sources ---------- */
+  html.push(`
+  <section>
+    <div class="sec-head"><h2>Sources and gaps</h2><p>What this page used, and what a paid product has that it does not.</p></div>
+    <div class="panel scroll src">
+      <table>
+        <thead><tr><th>Source</th><th>Used for</th><th>Access</th><th>Watch out for</th></tr></thead>
+        <tbody>
+          <tr><td>NRCS SNOTEL 1300</td><td>Depth, water equivalent, temperature, precipitation</td><td>Free, no key</td><td>Report-generator CSV. The newer REST API returned 403 from a script. Air temperature has a documented bias. Depth is whole inches.</td></tr>
+          <tr><td>NWS api.weather.gov</td><td>Grid forecast, snowfall, snow level, forecaster discussion, alerts</td><td>Free, send a User-Agent</td><td>Grid cell elevation is ${!hasErr(N) ? N.grid_elev_ft.toLocaleString() : "8,488"} ft, about 460 ft above the resort point.</td></tr>
+          <tr><td>Open-Meteo</td><td>Six weather models side by side</td><td>Free for non-commercial use, attribution required</td><td>Snowfall is an estimate from precipitation and temperature. Ensemble members need a paid plan. Open-Meteo data is CC BY 4.0.</td></tr>
+          <tr><td>powdermountain.com API</td><td>Lifts, trails, roads, parking, daily message, a 5-day range</td><td>Public JSON the resort's own page loads</td><td>Undocumented, can change without notice. The 5-day range is OpenSnow's, passed through with an attribution, so check terms before showing it publicly.</td></tr>
+          <tr><td>PrismCam mountain cams</td><td>Lightning Ridge, Hidden Lake, Timberline Base</td><td>Public images the resort page's own widget loads</td><td>Unofficial use of the widget's data feed, so it may change. Check PrismCam terms before showing these publicly. OpenSnow shows its own separate cams, which are not here.</td></tr>
+          <tr><td>UDOT camera</td><td>SR-158 road view</td><td>Public image</td><td>The resort's road-cam link serves the same frame.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel gap" style="margin-top:14px">
+      <div class="eyebrow" style="margin-bottom:8px">Not included</div>
+      <ul class="keymsg">
+        <li><b>OpenSnow Daily Snow.</b> The forecaster's written outlook is for subscribers. This page uses the NWS discussion in its place.</li>
+        <li><b>PEAKS.</b> OpenSnow's machine-learning downscaling is theirs. The model table above is raw model output with no mountain correction.</li>
+        <li><b>Utah Avalanche Center.</b> The Ogden advisory needs a free API token that UAC issues on request. Not requested yet.</li>
+        <li><b>OpenSnow's own cameras, 3D maps, radar.</b> Not available from a free source. The resort's cameras above are a separate set.</li>
+        <li><b>Snow stake camera.</b> None appears in the resort's camera feed right now. It may be seasonal or hosted elsewhere.</li>
+      </ul>
+    </div>
+  </section>
+  <footer>Snapshot built from public sources at the time shown above. Nothing on this page refreshes itself. Numbers are computed in the fetch script, not in the page. Forecast values are model output and will change with each run.</footer>`);
+
+  function buildStrip() {
+    const days = DS.days, COLW = 56, BARMAX = 100;
+    const maxv = Math.max(2, ...days.flatMap((d) => [d.am.value, d.pm.value]).filter((v) => v != null));
+    const fv = (v) => String(Number(v.toFixed(1)));
+    const dateOf = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+    const LC = {};
+    MODEL_ORDER.forEach((k) => { if (!hasErr(M) && M.models[k]) LC[M.models[k].label] = MCOLOR[k]; });
+
+    const half = (h) => {
+      if (h.value == null) return `<div class="half"><div class="b none"></div></div>`;
+      if (h.value < 0.05) return `<div class="half"><div class="b zero"></div></div>`;
+      const px = Math.max(3, Math.round((h.value / maxv) * BARMAX));
+      let inner;
+      if (h.kind === "now" && h.obs != null && h.fc) {
+        const po = Math.round(px * (h.obs / h.value));
+        inner = `<i style="height:${px - po}px;background:var(--s7)"></i><i style="height:${po}px;background:var(--accent)"></i>`;
+      } else {
+        inner = `<i style="height:${px}px;background:${h.kind === "obs" ? "var(--accent)" : "var(--s7)"}"></i>`;
+      }
+      return `<div class="half"><span class="v">${fv(h.value)}</span><div class="b" style="height:${px}px">${inner}</div></div>`;
+    };
+    const say = (h) => (h.value == null ? "no data" : fv(h.value) + " inches");
+    const cols = days.map((d, i) => {
+      const dt = dateOf(d.date), dow = dt.getUTCDay();
+      const cls = ["col", d.offset === 0 ? "today" : "", dow === 0 || dow === 6 ? "wk" : ""].join(" ").trim();
+      return `<button type="button" class="${cls}" data-i="${i}" aria-label="${DOW[dow]} ${MON[dt.getUTCMonth()]} ${dt.getUTCDate()}: AM ${say(d.am)}, PM ${say(d.pm)}">
+        <div class="bars">${half(d.am)}${half(d.pm)}</div><div class="ab"><span>A</span><span>P</span></div>
+        <div class="dl">${DOW[dow][0]}<b>${dt.getUTCDate()}</b></div></button>`;
+    }).join("");
+    const groups = DS.groups.map((g) => `<div class="grp ${g.to < 0 ? "obs" : "fc"}"><div class="grp-in"><span class="gl">${esc(g.label)}</span><span class="gv">${fv(g.total)}<small style="font-size:13px;color:var(--ink-3);margin-left:3px">in</small></span></div></div>`).join("");
+    const strip = $("#strip");
+    strip.innerHTML = `<div class="strip-inner"><div class="grp-row">${groups}</div><div class="cols">${cols}</div></div>`;
+
+    const block = (label, h) => {
+      let lines = "", chips = "";
+      if (h.obs != null) lines += `<p class="lines">Measured at the station: <b>${fv(h.obs)} in</b> of new snow depth${h.swe ? `, ${fv(h.swe)} in of water` : ""}.</p>`;
+      else if (h.kind !== "fc") lines += `<p class="lines">No station reading for this period.</p>`;
+      if (h.fc) {
+        lines += `<p class="lines">${h.kind === "now" ? "Rest of this period, model average" : "Model average"} <b>${fv(h.fc.mean)} in</b>, range ${fv(h.fc.min)} to ${fv(h.fc.max)} across ${h.fc.n} model${h.fc.n > 1 ? "s" : ""}.</p>`;
+        chips = `<div class="chips">${Object.entries(h.fc.by_model).map(([name, v]) => `<span><i style="background:${LC[name] || "var(--ink-3)"}"></i>${esc(name)} ${fv(v)}</span>`).join("")}</div>`;
+      } else if (h.kind === "fc") lines += `<p class="lines">No model run reaches this period.</p>`;
+      return `<div style="min-width:0"><div class="eyebrow">${label}</div><div class="hv num">${h.value == null ? "—" : fv(h.value)}<small>in</small></div>${lines}${chips}</div>`;
+    };
+    function show(i) {
+      const d = days[i], dt = dateOf(d.date);
+      strip.querySelectorAll(".col").forEach((c) => c.classList.toggle("sel", Number(c.dataset.i) === i));
+      const kind = d.offset < 0 ? "Measured" : d.offset === 0 ? "Today" : "Forecast";
+      const temps = d.hi_f != null ? ` · station high ${f0(d.hi_f)}° low ${f0(d.lo_f)}°F` : "";
+      $("#strip-detail").innerHTML = `
+        <h3>${DOW[dt.getUTCDay()]} ${MON[dt.getUTCMonth()]} ${dt.getUTCDate()} <span class="pill">${kind}</span>
+          <span class="muted num" style="font-size:13px;font-family:var(--f-data);font-weight:400">${d.total == null ? "no data" : fv(d.total) + " in total"}${temps}</span></h3>
+        <div class="grid g2" style="margin-top:10px">${block("AM · midnight to noon", d.am)}${block("PM · noon to midnight", d.pm)}</div>
+        <p class="muted" style="font-size:12.5px;margin:12px 0 0;max-width:80ch">${esc(DS.method)} Station snow is inferred from the depth sensor's gains, so settling and melting hide some snowfall. Times are Mountain.</p>`;
+    }
+    strip.addEventListener("click", (e) => { const c = e.target.closest(".col"); if (c) show(Number(c.dataset.i)); });
+    const ti = days.findIndex((d) => d.offset === 0);
+    show(ti);
+    strip.scrollLeft = Math.max(0, ti * COLW - strip.clientWidth * 0.5);
+  }
+
+  $("#app").innerHTML = html.join("");
+  if (!hasErr(DS)) buildStrip();
+  if (window.innerWidth < 760) { const g = $("#obsgrid"); if (g) g.style.gridTemplateColumns = "minmax(0,1fr)"; }
+
+  /* ---------- charts ---------- */
+  function lineChart(host, o) {
+    const NS = "http://www.w3.org/2000/svg";
+    const tip = document.createElement("div"); tip.className = "tip"; tip.style.display = "none"; host.appendChild(tip);
+    function draw() {
+      host.querySelectorAll("svg").forEach((n) => n.remove());
+      const W = Math.max(260, host.clientWidth), H = o.height || 220;
+      const narrow = W < 520;
+      const m = { l: 36, r: o.labels && !narrow ? 92 : 12, t: 8, b: 24 };
+      const x0 = o.x[0], x1 = o.x[1], y0 = o.y[0], y1 = o.y[1];
+      const X = (v) => m.l + ((v - x0) / (x1 - x0)) * (W - m.l - m.r);
+      const Y = (v) => H - m.b - ((v - y0) / (y1 - y0)) * (H - m.t - m.b);
+      const svg = document.createElementNS(NS, "svg"); svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", W); svg.setAttribute("height", H);
+      const add = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; svg.appendChild(e); return e; };
+      o.yTicks.forEach((v) => { add("line", { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), stroke: "var(--line)", "stroke-width": 1 }); add("text", { x: m.l - 6, y: Y(v) + 4, "text-anchor": "end" }, String(v)); });
+      o.xTicks.forEach((t) => add("text", { x: X(t.v), y: H - 6, "text-anchor": t.anchor || "middle" }, t.label));
+      add("line", { x1: m.l, x2: W - m.r, y1: Y(y0), y2: Y(y0), stroke: "var(--ink-3)", "stroke-width": 1 });
+      if (o.ref) { add("line", { x1: m.l, x2: W - m.r, y1: Y(o.ref), y2: Y(o.ref), stroke: "var(--ink-3)", "stroke-dasharray": "4 4", "stroke-width": 1 }); }
+      const ends = [];
+      o.series.forEach((s) => {
+        if (!s.pts.length) return;
+        const d = s.pts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1)).join(" ");
+        add("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" });
+        const last = s.pts[s.pts.length - 1];
+        add("circle", { cx: X(last[0]), cy: Y(last[1]), r: 3.5, fill: s.color, stroke: "var(--surface)", "stroke-width": 2 });
+        ends.push({ s, x: X(last[0]), y: Y(last[1]) });
+      });
+      if (o.labels && !narrow) {
+        ends.sort((a, b) => b.y - a.y);
+        let prev = H - m.b - 4;
+        ends.forEach((e) => { e.ly = Math.min(e.y, prev); prev = e.ly - 13; });
+        ends.forEach((e) => add("text", { x: e.x + 8, y: e.ly + 4, class: "lbl" }, e.s.short || e.s.name));
+      }
+      const cross = add("line", { y1: m.t, y2: H - m.b, stroke: "var(--ink-3)", "stroke-width": 1, visibility: "hidden" });
+      const hit = add("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" });
+      const xs = [...new Set(o.series.flatMap((s) => s.pts.map((p) => p[0])))].sort((a, b) => a - b);
+      function move(ev) {
+        const r = svg.getBoundingClientRect(); const px = ev.clientX - r.left;
+        const v = x0 + ((px - m.l) / (W - m.l - m.r)) * (x1 - x0);
+        let best = xs[0]; xs.forEach((q) => { if (Math.abs(q - v) < Math.abs(best - v)) best = q; });
+        cross.setAttribute("x1", X(best)); cross.setAttribute("x2", X(best)); cross.setAttribute("visibility", "visible");
+        const lines = o.series.map((s) => { const p = s.pts.find((q) => q[0] === best); return p ? `<div><span><i style="background:${s.color}"></i>${esc(s.name)}</span><span class="num">${o.fmt(p[1])}</span></div>` : ""; }).join("");
+        tip.innerHTML = `<b>${esc(o.tipTitle(best))}</b>${lines}`; tip.style.display = "block";
+        const tw = tip.offsetWidth; let left = X(best) + 12; if (left + tw > W) left = X(best) - tw - 12; tip.style.left = Math.max(0, left) + "px"; tip.style.top = "6px";
+      }
+      // Touch: drag sideways to scrub, and the readout stays after the finger lifts. It clears when the
+      // viewer taps elsewhere on the page. A mouse still clears on leave.
+      hit.style.touchAction = "pan-y";
+      hit.addEventListener("pointermove", move); hit.addEventListener("pointerdown", move);
+      const hide = () => { cross.setAttribute("visibility", "hidden"); tip.style.display = "none"; };
+      hit.addEventListener("pointerleave", (ev) => { if (ev.pointerType === "mouse") hide(); });
+      host._hide = hide;
+      host.insertBefore(svg, tip);
+    }
+    document.addEventListener("pointerdown", (ev) => { if (!host.contains(ev.target) && host._hide) host._hide(); });
+    draw(); let w = host.clientWidth; new ResizeObserver(() => { if (host.clientWidth !== w) { w = host.clientWidth; draw(); } }).observe(host);
+  }
+
+  if (!hasErr(S) && $("#ch-snow")) {
+    const toX = (t) => { const [d, h] = t.split("T"); const [y, mo, da] = d.split("-").map(Number); return Date.UTC(y, mo - 1, da, Number(h.slice(0, 2))) / 36e5; };
+    const hs = S.hourly;
+    const pts = (key) => hs.filter((h) => h[key] != null).map((h) => [toX(h.t), h[key]]);
+    const xa = toX(hs[0].t), xb = toX(hs[hs.length - 1].t);
+    const midnights = []; for (let v = Math.ceil(xa / 24) * 24; v <= xb; v += 24) midnights.push(v);
+    const lab = (v) => { const d = new Date(v * 36e5); return DOW[d.getUTCDay()] + " " + d.getUTCDate(); };
+    const tipT = (v) => { const d = new Date(v * 36e5); return DOW[d.getUTCDay()] + " " + MON[d.getUTCMonth()] + " " + d.getUTCDate() + ", " + d.getUTCHours() + ":00 station time"; };
+    const maxD = Math.max(...hs.map((h) => Math.max(h.depth || 0, h.swe || 0)));
+    const ymax = Math.max(2, Math.ceil(maxD + 0.5));
+    lineChart($("#ch-snow"), { height: 190, x: [xa, xb], y: [0, ymax], yTicks: Array.from({ length: ymax + 1 }, (_, i) => i).filter((v) => ymax <= 6 || v % 2 === 0),
+      xTicks: midnights.map((v) => ({ v, label: lab(v) })), fmt: (v) => f1(v) + " in", tipTitle: tipT,
+      series: [{ name: "Depth", color: "var(--s1)", pts: pts("depth") }, { name: "Water equiv.", color: "var(--s3)", pts: pts("swe") }] });
+    const tmin = Math.min(...hs.filter((h) => h.temp_f != null).map((h) => h.temp_f)), tmax = Math.max(...hs.filter((h) => h.temp_f != null).map((h) => h.temp_f));
+    const lo = Math.floor((Math.min(tmin, 32) - 2) / 10) * 10, hi = Math.ceil((Math.max(tmax, 32) + 2) / 10) * 10;
+    lineChart($("#ch-temp"), { height: 150, x: [xa, xb], y: [lo, hi], ref: 32, yTicks: Array.from({ length: (hi - lo) / 10 + 1 }, (_, i) => lo + i * 10),
+      xTicks: midnights.map((v) => ({ v, label: lab(v) })), fmt: (v) => f1(v) + "°F", tipTitle: tipT,
+      series: [{ name: "Air temp", color: "var(--s2)", pts: pts("temp_f") }] });
+  }
+
+  if (!hasErr(M) && $("#ch-models")) {
+    const ms = MODEL_ORDER.filter((k) => M.models[k] && M.models[k].cum_snow_in && M.models[k].cum_snow_in.length);
+    const dates = M.models[ms[0]].daily_dates;
+    const series = ms.map((k) => { const m = M.models[k]; return { name: m.label, short: m.label, color: MCOLOR[k], pts: [[0, 0]].concat(m.cum_snow_in.map((v, i) => [i + 1, v])) }; });
+    const maxv = Math.max(...ms.map((k) => M.models[k].total_in || 0));
+    const ymax = Math.max(2, Math.ceil(maxv / 2) * 2);
+    const longest = Math.max(...ms.map((k) => M.models[k].cum_snow_in.length));
+    const ticks = []; for (let i = 0; i <= longest; i += longest > 10 ? 3 : 1) ticks.push({ v: i, label: i === 0 ? "Now" : dateLabel(dates[i - 1] || dates[0]) });
+    const dayLabel = (i) => (i === 0 ? "Now" : "End of " + dateLabel(dates[i - 1]));
+    lineChart($("#ch-models"), { height: 250, labels: true, x: [0, longest], y: [0, ymax], yTicks: Array.from({ length: ymax / 2 + 1 }, (_, i) => i * 2),
+      xTicks: ticks, fmt: (v) => f1(v) + " in", tipTitle: dayLabel, series });
+  }
+  // Reload when a newer data pull is published (page left open on a phone).
+  setInterval(() => {
+    if (document.hidden) return;
+    fetch("data.json?_=" + Date.now()).then((r) => r.json()).then((n) => { if (n.generated !== D.generated) location.reload(); }).catch(() => {});
+  }, 10 * 60 * 1000);
+}).catch((e) => { document.getElementById("app").textContent = "Could not load data: " + e; });
+</script>

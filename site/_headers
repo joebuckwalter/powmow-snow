@@ -1,0 +1,4 @@
+/data.json
+  Cache-Control: no-cache
+/cams/*
+  Cache-Control: public, max-age=300
