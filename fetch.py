@@ -7,6 +7,7 @@ Free, unauthenticated sources only:
   models   Open-Meteo, one request per weather model (snowfall, precip, temp)
   resort   powdermountain.com/api/conditions (lifts, trails, roads, daily message,
            OpenSnow-supplied 5-day forecast, webcam list)
+  avalanche  Utah Avalanche Center Ogden zone, Avalanche.org public API (no key)
   cams     mountain cams (PrismCam) + UDOT SR-158 cam, saved as image files
 
 All arithmetic (unit conversion, totals, spread) happens here, not in the page.
@@ -347,6 +348,44 @@ def fetch_cams():
     return out
 
 
+# ------------------------------------------------------------ avalanche
+AVY = "https://api.avalanche.org/v2/public"
+LEVELS = {1: "Low", 2: "Moderate", 3: "Considerable", 4: "High", 5: "Extreme"}
+
+
+def _lvl(v):
+    try:
+        v = int(v)
+    except (TypeError, ValueError):
+        return None
+    return v if v in LEVELS else None
+
+
+def fetch_avy():
+    """Utah Avalanche Center, Ogden zone, via the Avalanche.org public API (no key)."""
+    ml = json.loads(get(f"{AVY}/products/map-layer"))
+    zone = next(f["properties"] for f in ml["features"]
+                if f["properties"].get("center_id") == "UAC" and f["properties"].get("name") == "Ogden")
+    now = datetime.now(timezone.utc)
+    lst = json.loads(get(f"{AVY}/products?avalanche_center_id=UAC&date_start={(now - timedelta(days=7)).date()}"
+                         f"&date_end={(now + timedelta(days=1)).date()}"))
+    mine = [p for p in lst if p.get("product_type") == "forecast"
+            and any(z.get("zone_id") == "ogden" for z in p.get("forecast_zone", []))]
+    out = {"zone": "Ogden", "center": "Utah Avalanche Center", "link": zone["link"],
+           "level": _lvl(zone.get("danger_level")), "rating": zone.get("danger"),
+           "off_season": zone.get("off_season"), "product": None}
+    if mine:
+        latest = max(mine, key=lambda p: p["published_time"])
+        det = json.loads(get(f"{AVY}/product/{latest['id']}"))
+        dng = det.get("danger") or []
+        cur = next((d for d in dng if d.get("valid_day") == "current"), dng[0] if dng else None)
+        bl = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", det.get("bottom_line") or "")).strip()
+        out["product"] = {"id": latest["id"], "published": det.get("published_time"), "expires": det.get("expires_time"),
+                          "bottom_line": bl or None,
+                          "elevation": {k: _lvl(cur.get(k)) for k in ("upper", "middle", "lower")} if cur else None}
+    return out
+
+
 # ----------------------------------------------------- daily strip (OpenSnow-style)
 GROUPS = [(-15, -11, "Prev 11–15 days"), (-10, -6, "Prev 6–10 days"), (-5, -1, "Prev 1–5 days"),
           (0, 4, "Next 1–5 days"), (5, 9, "Next 6–10 days"), (10, 14, "Next 11–15 days")]
@@ -437,6 +476,7 @@ if __name__ == "__main__":
             "models": models, "resort": safe("resort", fetch_resort),
             "daily_snow": safe("daily_snow", lambda: build_daily_snow(
                 full, snotel["daily"], models["models"], datetime.now(ZoneInfo("America/Denver")))),
+            "avalanche": safe("avalanche", fetch_avy),
             "cams": safe("cams", fetch_cams)}
     SITE.mkdir(exist_ok=True)
     out = SITE / "data.json"

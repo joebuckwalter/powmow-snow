@@ -140,6 +140,11 @@ tr.sum td { background: var(--surface-2); font-weight: 600; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 12.5px; color: var(--ink-2); }
 .chips span { display: inline-flex; align-items: center; gap: 5px; }
 .chips i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.lvl { display: inline-flex; align-items: center; gap: 8px; font-family: var(--f-data); font-weight: 600; font-size: 14px; padding: 5px 12px; border-radius: 6px; outline: 1px solid var(--line); }
+.lvl b { font-size: 16px; }
+.lvl.l1 { background: #50b848; color: #0e2a0c; } .lvl.l2 { background: #fff200; color: #2b2800; }
+.lvl.l3 { background: #f7941e; color: #2e1700; } .lvl.l4 { background: #ed1c24; color: #fff; }
+.lvl.l5 { background: #000; color: #fff; } .lvl.l0 { background: var(--surface-2); color: var(--ink-2); }
 .callout { border-left: 3px solid var(--warn); background: var(--warn-bg); color: var(--ink); padding: 10px 14px; border-radius: 0 8px 8px 0; margin-top: 12px; font-size: 14px; }
 .callout b { font-weight: 600; }
 
@@ -232,6 +237,28 @@ fetch("data.json?_=" + Date.now()).then((r) => r.json()).then(function (D) {
       <div class="panel stat"><div class="label">Water in snowpack</div><div class="val num">${f1(c.swe_in)}<small>in</small></div><div class="note">Snow water equivalent</div></div>
       <div class="panel stat"><div class="label">Station air temp</div><div class="val num">${f0(c.temp_f)}<small>°F</small></div><div class="note">Known sensor bias, see sources</div></div>
       <div class="panel stat"><div class="label">Precip since Oct 1</div><div class="val num">${f1(c.water_year_prec_in)}<small>in</small></div><div class="note">Liquid, water year to date</div></div>
+    </div>
+  </section>`);
+  }
+
+  /* ---------- section: avalanche ---------- */
+  const AV = D.avalanche;
+  if (!hasErr(AV)) {
+    const LV = { 1: "Low", 2: "Moderate", 3: "Considerable", 4: "High", 5: "Extreme" };
+    const chip = (n) => `<span class="lvl l${n || 0}"><b>${n || "–"}</b> ${n ? LV[n] : "No rating"}</span>`;
+    const P = AV.product, E = P && P.elevation;
+    const rows = E ? [["Above treeline", E.upper], ["Near treeline", E.middle], ["Below treeline", E.lower]]
+      .map((r) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>${r[0]}</span>${chip(r[1])}</div>`).join("") : "";
+    html.push(`
+  <section>
+    <div class="sec-head"><h2>Avalanche</h2><p>${esc(AV.center)}, ${esc(AV.zone)} zone. ${P && P.published ? "Advisory posted " + esc(stamp(P.published)) + "." : ""}</p></div>
+    <div class="panel" style="display:grid;gap:12px">
+      <div>${chip(AV.level)}</div>
+      ${rows ? `<div style="display:grid;gap:8px;max-width:420px">${rows}</div>` : ""}
+      ${P && P.bottom_line ? `<p style="margin:0;max-width:70ch"><b>Bottom line.</b> ${esc(P.bottom_line)}</p>` : ""}
+      ${AV.level ? "" : `<p class="muted" style="margin:0;max-width:70ch">UAC has not published a danger rating for Ogden yet. It will appear here once the daily advisory starts.</p>`}
+      <p style="margin:0;font-size:13px"><a href="${esc(AV.link)}" target="_blank" rel="noopener">Read the full Ogden advisory at utahavalanchecenter.org</a></p>
+      <p class="muted" style="margin:0;font-size:12.5px;max-width:70ch">This is a summary, not a substitute for the advisory. Read it before any backcountry or sidecountry travel.</p>
     </div>
   </section>`);
   }
@@ -397,6 +424,7 @@ fetch("data.json?_=" + Date.now()).then((r) => r.json()).then(function (D) {
           <tr><td>Open-Meteo</td><td>Six weather models side by side</td><td>Free for non-commercial use, attribution required</td><td>Snowfall is an estimate from precipitation and temperature. Ensemble members need a paid plan. Open-Meteo data is CC BY 4.0.</td></tr>
           <tr><td>powdermountain.com API</td><td>Lifts, trails, roads, parking, daily message, a 5-day range</td><td>Public JSON the resort's own page loads</td><td>Undocumented, can change without notice. The 5-day range is OpenSnow's, passed through with an attribution, so check terms before showing it publicly.</td></tr>
           <tr><td>PrismCam mountain cams</td><td>Lightning Ridge, Hidden Lake, Timberline Base</td><td>Public images the resort page's own widget loads</td><td>Unofficial use of the widget's data feed, so it may change. Check PrismCam terms before showing these publicly. OpenSnow shows its own separate cams, which are not here.</td></tr>
+          <tr><td>Avalanche.org public API</td><td>Utah Avalanche Center danger rating, Ogden zone</td><td>Free, no key</td><td>Shows the rating and bottom line only; the full advisory (problems, terrain, trends) stays at UAC. Check UAC's terms before showing it widely.</td></tr>
           <tr><td>UDOT camera</td><td>SR-158 road view</td><td>Public image</td><td>The resort's road-cam link serves the same frame.</td></tr>
         </tbody>
       </table>
@@ -406,7 +434,6 @@ fetch("data.json?_=" + Date.now()).then((r) => r.json()).then(function (D) {
       <ul class="keymsg">
         <li><b>OpenSnow Daily Snow.</b> The forecaster's written outlook is for subscribers. This page uses the NWS discussion in its place.</li>
         <li><b>PEAKS.</b> OpenSnow's machine-learning downscaling is theirs. The model table above is raw model output with no mountain correction.</li>
-        <li><b>Utah Avalanche Center.</b> The Ogden advisory needs a free API token that UAC issues on request. Not requested yet.</li>
         <li><b>OpenSnow's own cameras, 3D maps, radar.</b> Not available from a free source. The resort's cameras above are a separate set.</li>
         <li><b>Snow stake camera.</b> None appears in the resort's camera feed right now. It may be seasonal or hosted elsewhere.</li>
       </ul>
