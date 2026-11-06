@@ -7,6 +7,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 concurrency:
   group: update
   cancel-in-progress: false
@@ -31,3 +34,14 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: "4"
           command: deploy
+      - name: Record daily history
+        run: |
+          python3 -I history.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add history
+          if ! git diff --cached --quiet; then
+            git commit -q -m "history $(date -u +%F)"
+            git pull -q --rebase origin main
+            git push -q origin HEAD:main
+          fi
