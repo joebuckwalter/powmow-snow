@@ -412,7 +412,7 @@ fetch("data.json?_=" + Date.now()).then((r) => r.json()).then(function (D) {
       </ul>
     </div>
   </section>
-  <footer>Snapshot built from public sources at the time shown above. Nothing on this page refreshes itself. Numbers are computed in the fetch script, not in the page. Forecast values are model output and will change with each run.</footer>`);
+  <footer>Rebuilt from public sources about every 30 minutes; the time shown above is the latest pull. Numbers are computed in the fetch script, not in the page. Forecast values are model output and will change with each run.</footer>`);
 
   function buildStrip() {
     const days = DS.days, COLW = 56, BARMAX = 100;
