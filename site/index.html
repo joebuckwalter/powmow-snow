@@ -168,6 +168,17 @@ details p { color: var(--ink-2); margin: 8px 0 0; max-width: 72ch; }
 .cam { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (max-width: 760px) { .cam { grid-template-columns: minmax(0, 1fr); } }
 .camgrid img { width: 100%; height: auto; border-radius: 6px; display: block; background: var(--surface-2); aspect-ratio: 16 / 9; object-fit: cover; }
+.camgrid img { cursor: zoom-in; }
+.lb { position: fixed; inset: 0; z-index: 50; background: rgba(5, 8, 12, .94); display: flex; flex-direction: column; }
+.lb[hidden] { display: none; }
+.lb-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; color: #e8edf2; font-size: 14px; }
+.lb-bar span { flex: 1; min-width: 0; }
+.lb-bar button { background: rgba(255,255,255,.12); color: #fff; border: 0; border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
+.lb-view { flex: 1; overflow: auto; display: grid; place-items: center; touch-action: pan-x pan-y pinch-zoom; }
+.lb-view img { max-width: 100%; max-height: calc(100vh - 60px); cursor: zoom-in; display: block; }
+.lb-view.zoomed { place-items: start; }
+.lb-view.zoomed img { max-width: none; max-height: none; width: 300%; cursor: zoom-out; }
+@media (min-width: 900px) { .lb-view.zoomed img { width: 200%; } }
 .cam img { width: 100%; height: auto; border-radius: 8px; display: block; background: var(--surface-2); }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; margin: 0; }
 .kv dt { color: var(--ink-3); } .kv dd { margin: 0; }
@@ -383,7 +394,9 @@ fetch("data.json?_=" + Date.now()).then((r) => r.json()).then(function (D) {
       const h = Math.round(c.age_min / 6) / 10; return h + " h old";
     };
     const camCard = (c) => `<figure style="margin:0;min-width:0">
-        <img alt="${esc(c.name)} camera" src="${esc(c.live ? c.img : c.img + "?v=" + D.generated)}" loading="lazy">
+        <img alt="${esc(c.name)} camera" src="${esc(c.live ? c.img : c.img + "?v=" + D.generated)}" loading="lazy"
+          data-full="${esc(c.live ? c.img.replace(/\/720\.jpg$/, "/1080.jpg") : c.img + "?v=" + D.generated)}"
+          data-cap="${esc(c.name + (c.taken_local ? " · " + c.taken_local.slice(5, 16).replace("-", "/") : ""))}">
         <figcaption style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;margin-top:6px;font-size:13px">
           <b style="font-weight:600">${esc(c.name)}</b>
           <span><span class="pill ${c.stale ? "warn" : "good"}"><i></i>${c.stale ? "Offline" : "Live"}</span> <span class="muted num" style="font-size:11.5px">${esc(ageLabel(c))}${c.taken_local ? " · " + esc(c.taken_local.slice(5, 16).replace("-", "/").replace(" ", " ")) : ""}</span></span>
@@ -611,4 +624,39 @@ fetch("data.json?_=" + Date.now()).then((r) => r.json()).then(function (D) {
     fetch("data.json?_=" + Date.now()).then((r) => r.json()).then((n) => { if (n.generated !== D.generated) location.reload(); }).catch(() => {});
   }, 10 * 60 * 1000);
 }).catch((e) => { document.getElementById("app").textContent = "Could not load data: " + e; });
+/* Camera lightbox: tap a cam for the 1080p frame; tap the image to zoom 2-3x and drag/scroll to pan.
+   Pinch-zoom also works on phones. Esc, the Close button, or tapping the dark area closes it. */
+(function () {
+  const lb = document.createElement("div");
+  lb.className = "lb"; lb.hidden = true;
+  lb.innerHTML = '<div class="lb-bar"><span></span><button type="button" data-z>Zoom</button><button type="button" data-x>Close</button></div><div class="lb-view"><img alt=""></div>';
+  document.body.appendChild(lb);
+  const view = lb.querySelector(".lb-view"), img = view.querySelector("img"), cap = lb.querySelector("span"), zb = lb.querySelector("[data-z]");
+  const close = () => { lb.hidden = true; img.removeAttribute("src"); document.body.style.overflow = ""; };
+  const zoom = (on, x, y) => {
+    view.classList.toggle("zoomed", on); zb.textContent = on ? "Fit" : "Zoom";
+    if (on) {  // keep the tapped point under the finger
+      const fx = x ?? .5, fy = y ?? .5;
+      view.scrollLeft = img.offsetWidth * fx - view.clientWidth / 2;
+      view.scrollTop = img.offsetHeight * fy - view.clientHeight / 2;
+    }
+  };
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest(".camgrid img");
+    if (!t) return;
+    cap.textContent = t.dataset.cap || t.alt;
+    img.src = t.src;  // show the cached grid frame at once, then swap in 1080p
+    const hi = new Image(); hi.onload = () => { if (!lb.hidden) img.src = hi.src; }; hi.src = t.dataset.full || t.src;
+    zoom(false); lb.hidden = false; document.body.style.overflow = "hidden";
+  });
+  img.addEventListener("click", (e) => {
+    if (view.classList.contains("zoomed")) return zoom(false);
+    const r = img.getBoundingClientRect();
+    zoom(true, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+  });
+  zb.addEventListener("click", () => zoom(!view.classList.contains("zoomed")));
+  lb.querySelector("[data-x]").addEventListener("click", close);
+  view.addEventListener("click", (e) => { if (e.target === view) close(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !lb.hidden) close(); });
+})();
 </script>
