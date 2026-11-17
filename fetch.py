@@ -31,6 +31,9 @@ CM_PER_IN = 2.54
 MM_PER_IN = 25.4
 
 
+LIVE_URL = "https://powmow-snow.buckwalter.workers.dev/"
+
+
 def get(url, *, binary=False, timeout=30, retries=2):
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     err = None
@@ -478,6 +481,17 @@ if __name__ == "__main__":
                 full, snotel["daily"], models["models"], datetime.now(ZoneInfo("America/Denver")))),
             "avalanche": safe("avalanche", fetch_avy),
             "cams": safe("cams", fetch_cams)}
+    # One upstream blip (SNOTEL 502s are common) used to fail the whole run, so cams and every other
+    # source stayed stale for hours. Instead, carry forward the last published value for a failed source.
+    try:
+        prev = json.loads(get(LIVE_URL + "data.json"))
+    except Exception as e:  # noqa: BLE001
+        prev = {}
+        print(f"WARN  no previous data.json to carry forward: {e}", file=sys.stderr)
+    for k, v in list(data.items()):
+        if isinstance(v, dict) and "error" in v and isinstance(prev.get(k), dict) and "error" not in prev[k]:
+            data[k] = {**prev[k], "carried_from": prev[k].get("carried_from") or prev.get("generated"), "carry_reason": v["error"]}
+            print(f"CARRY {k}: kept value from {data[k]['carried_from']}", file=sys.stderr)
     SITE.mkdir(exist_ok=True)
     out = SITE / "data.json"
     out.write_text(json.dumps(data, separators=(",", ":")))

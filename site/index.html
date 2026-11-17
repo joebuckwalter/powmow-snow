@@ -1,6 +1,8 @@
-<title>Powmow Snow Desk</title>
+<!doctype html>
+<html lang="en">
 <meta charset="utf-8">
-<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Powmow Snow Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -165,6 +167,7 @@ details p { color: var(--ink-2); margin: 8px 0 0; max-width: 72ch; }
 
 .cam { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (max-width: 760px) { .cam { grid-template-columns: minmax(0, 1fr); } }
+.camgrid img { width: 100%; height: auto; border-radius: 6px; display: block; background: var(--surface-2); aspect-ratio: 16 / 9; object-fit: cover; }
 .cam img { width: 100%; height: auto; border-radius: 8px; display: block; background: var(--surface-2); }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; margin: 0; }
 .kv dt { color: var(--ink-3); } .kv dd { margin: 0; }
@@ -380,16 +383,23 @@ fetch("data.json?_=" + Date.now()).then((r) => r.json()).then(function (D) {
       const h = Math.round(c.age_min / 6) / 10; return h + " h old";
     };
     const camCard = (c) => `<figure style="margin:0;min-width:0">
-        <img alt="${esc(c.name)} camera" src="${esc(c.img)}?v=${esc(D.generated)}">
+        <img alt="${esc(c.name)} camera" src="${esc(c.live ? c.img : c.img + "?v=" + D.generated)}" loading="lazy">
         <figcaption style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;margin-top:6px;font-size:13px">
           <b style="font-weight:600">${esc(c.name)}</b>
           <span><span class="pill ${c.stale ? "warn" : "good"}"><i></i>${c.stale ? "Offline" : "Live"}</span> <span class="muted num" style="font-size:11.5px">${esc(ageLabel(c))}${c.taken_local ? " · " + esc(c.taken_local.slice(5, 16).replace("-", "/").replace(" ", " ")) : ""}</span></span>
         </figcaption></figure>`;
+    window.camCards = (list) => list.map((c) => `<div class="panel" style="padding:10px;min-width:0">${camCard(c)}</div>`).join("");
+    const refreshCams = () => fetch("live/cams.json?_=" + Date.now()).then((r) => r.ok ? r.json() : Promise.reject(r.status)).then((live) => {
+      const g = document.getElementById("camgrid");
+      if (g && live.length) g.innerHTML = camCards(live.map((c) => ({ ...c, live: true })));
+    }).catch(() => {});
+    setTimeout(refreshCams, 0);
+    setInterval(() => { if (!document.hidden) refreshCams(); }, 3 * 60 * 1000);
     if (cams.length) html.push(`
   <section>
-    <div class="sec-head"><h2>Cameras</h2><p>Frames saved at pull time. Mountain cams come from the PrismCam widget on the resort site; the road cam is UDOT.</p></div>
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))">${cams.map((c) => `<div class="panel" style="padding:10px">${camCard(c)}</div>`).join("")}</div>
-    <p class="muted" style="font-size:12.5px;margin:8px 0 0">No snow-stake camera is listed in the resort's camera feed right now. Offline means the newest frame is more than 3 hours old, which is expected for a night camera.</p>
+    <div class="sec-head"><h2>Cameras</h2><p>Live frames. Mountain cams come from the PrismCam widget on the resort site; the road cam is UDOT.</p></div>
+    <div id="camgrid" class="grid camgrid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))">${camCards(cams)}</div>
+    <p class="muted" style="font-size:12.5px;margin:8px 0 0">Mountain cams reload the newest frame every few minutes while the page is open. Offline means the newest frame is more than 3 hours old, which is expected for a night camera.</p>
   </section>`);
     const roads = R.roads.map((r) => `<dt>${esc(r.name)} (SR-${esc(r.route)})</dt><dd><span class="pill ${r.open ? "good" : "crit"}"><i></i>${r.open ? "Open" : "Closed"}</span> <span class="muted">${esc(r.surface.replace(/_/g, " ").toLowerCase())}, ${r.equipment === "NORM" ? "no traction rules" : esc(r.equipment)}</span></dd>`).join("");
     const parking = R.parking.map((p) => `<dt>${esc(p.name)}</dt><dd>${esc(p.status.replace(/_/g, " ").toLowerCase())}${p.note ? ` <span class="muted">· ${esc(p.note)}</span>` : ""}</dd>`).join("");

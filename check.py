@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail the run (so the last good deploy stays up) if a core source errored."""
+"""Fail the run (so the last good deploy stays up) if a core source errored with nothing to carry forward."""
 import json, sys
 from pathlib import Path
 
@@ -9,6 +9,9 @@ bad = [k for k in hard if not d.get(k) or (isinstance(d[k], dict) and "error" in
 cams = d.get("cams")
 if not isinstance(cams, list) or not any(c.get("img") for c in cams):
     print("WARN  no cameras fetched", file=sys.stderr)
+carried = [k for k in hard if isinstance(d.get(k), dict) and d[k].get("carried_from")]
+if carried:
+    print(f"WARN  carried forward: {', '.join(carried)}", file=sys.stderr)
 if bad:
     sys.exit(f"core sources failed: {', '.join(bad)}")
 print("data ok")
