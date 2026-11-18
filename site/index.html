@@ -192,7 +192,23 @@ footer { margin-top: 28px; color: var(--ink-3); font-size: 12.5px; max-width: 80
 <div class="wrap" id="app"></div>
 
 <script>
-fetch("data.json?_=" + Date.now()).then((r) => r.json()).then(function (D) {
+/* Each source loads live from the Worker (/live/<name>.json, see live.js) in parallel. A source that
+   fails falls back to the Worker's carried copy, or failing that to the last build's data.json. */
+const LIVE = ["snotel", "nws", "models", "resort", "daily_snow", "avalanche", "cams"];
+function loadData() {
+  let saved;
+  const fromBuild = () => (saved ||= fetch("data.json?_=" + Date.now()).then((r) => r.json()));
+  return Promise.all(LIVE.map((k) => fetch(`live/${k}.json`).then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((j) => ({ k, v: j.data, carried: j.carried ? j.at : null }))
+    .catch(() => fromBuild().then((b) => ({ k, v: b[k], carried: b.generated })).catch(() => ({ k, v: { error: "unavailable" } })))))
+    .then((parts) => {
+      const D = { generated: new Date().toISOString(), carried: {} };
+      for (const { k, v, carried } of parts) { D[k] = v; if (carried) D.carried[k] = carried; }
+      if (Array.isArray(D.cams) && !D.carried.cams) D.cams = D.cams.map((c) => ({ ...c, live: true }));
+      return D;
+    });
+}
+loadData().then(function (D) {
   const $ = (s, el) => (el || document).querySelector(s);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const f1 = (n) => (n == null ? "—" : (Math.round(n * 10) / 10).toFixed(1));
@@ -219,10 +235,10 @@ fetch("data.json?_=" + Date.now()).then((r) => r.json()).then(function (D) {
     <div>
       <div class="eyebrow">Eden, Utah · 41.38 N 111.76 W · 8,025 ft</div>
       <h1>Powder Mountain</h1>
-      <div class="sub">Free-source conditions and forecast desk. Prototype snapshot.</div>
+      <div class="sub">Free-source conditions and forecast desk. Pulled live from each source when you load the page.</div>
     </div>
     <div class="fresh">
-      <span>Pulled <b>${stamp(D.generated)}</b></span>
+      <span>Loaded <b>${stamp(D.generated)}</b></span>${Object.keys(D.carried).length ? `<span>Saved copy for <b>${esc(Object.keys(D.carried).join(", ").replace(/_/g, " "))}</b> (source didn't answer)</span>` : ""}
       <span>SNOTEL <b>${S && !S.error ? S.current.t.replace("T", " ") : "—"}</b></span>
       <span>NWS grid <b>${!hasErr(N) ? stamp(N.updated) : "—"}</b></span>
       <span>Resort <b>${!hasErr(R) ? stamp(R.updated) : "—"}</b></span>
@@ -402,11 +418,10 @@ fetch("data.json?_=" + Date.now()).then((r) => r.json()).then(function (D) {
           <span><span class="pill ${c.stale ? "warn" : "good"}"><i></i>${c.stale ? "Offline" : "Live"}</span> <span class="muted num" style="font-size:11.5px">${esc(ageLabel(c))}${c.taken_local ? " · " + esc(c.taken_local.slice(5, 16).replace("-", "/").replace(" ", " ")) : ""}</span></span>
         </figcaption></figure>`;
     window.camCards = (list) => list.map((c) => `<div class="panel" style="padding:10px;min-width:0">${camCard(c)}</div>`).join("");
-    const refreshCams = () => fetch("live/cams.json?_=" + Date.now()).then((r) => r.ok ? r.json() : Promise.reject(r.status)).then((live) => {
+    const refreshCams = () => fetch("live/cams.json?_=" + Date.now()).then((r) => r.ok ? r.json() : Promise.reject(r.status)).then((j) => j.carried ? [] : j.data).then((live) => {
       const g = document.getElementById("camgrid");
       if (g && live.length) g.innerHTML = camCards(live.map((c) => ({ ...c, live: true })));
     }).catch(() => {});
-    setTimeout(refreshCams, 0);
     setInterval(() => { if (!document.hidden) refreshCams(); }, 3 * 60 * 1000);
     if (cams.length) html.push(`
   <section>
@@ -618,11 +633,11 @@ fetch("data.json?_=" + Date.now()).then((r) => r.json()).then(function (D) {
     lineChart($("#ch-models"), { height: 250, labels: true, x: [0, longest], y: [0, ymax], yTicks: Array.from({ length: ymax / 2 + 1 }, (_, i) => i * 2),
       xTicks: ticks, fmt: (v) => f1(v) + " in", tipTitle: dayLabel, series });
   }
-  // Reload when a newer data pull is published (page left open on a phone).
+  // Page left open (on a phone, say): reload every 15 min so the numbers stay live. Skipped while a cam is enlarged.
   setInterval(() => {
-    if (document.hidden) return;
-    fetch("data.json?_=" + Date.now()).then((r) => r.json()).then((n) => { if (n.generated !== D.generated) location.reload(); }).catch(() => {});
-  }, 10 * 60 * 1000);
+    const lb = document.querySelector(".lb");
+    if (!document.hidden && (!lb || lb.hidden)) location.reload();
+  }, 15 * 60 * 1000);
 }).catch((e) => { document.getElementById("app").textContent = "Could not load data: " + e; });
 /* Camera lightbox: tap a cam for the 1080p frame; tap the image to zoom 2-3x and drag/scroll to pan.
    Pinch-zoom also works on phones. Esc, the Close button, or tapping the dark area closes it. */

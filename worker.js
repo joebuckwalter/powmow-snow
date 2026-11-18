@@ -1,56 +1,37 @@
-// Static site + two live routes + a reliable schedule.
-// - /live/cams.json: newest frame for each mountain cam (PrismCam) plus the UDOT road cam, edge-cached 60 s.
-// - /live/udot.gif: UDOT SR-158 frame, proxied and edge-cached 60 s.
-// - scheduled(): GitHub's own cron fired only 3-4 times a day, so a Cloudflare cron trigger
-//   calls workflow_dispatch instead. Needs GH_TOKEN (fine-grained, Actions: write on this repo).
-const PRISM = "https://php.prismcam.com/public/helpers/cam_init.php?cams=&pages=1762366089" +
-  "&url=https%3A%2F%2Fpowdermountain.com%2Fconditions&callback=cb";
-const UDOT = "https://udottraffic.utah.gov/1_devices/sr-158-mp11.gif";
-const REPO = "joebuckwalter/powmow-snow";
+// Static site + live data. /live/<source>.json computes one source on request (see live.js), so a page
+// refresh is as fresh as the source itself. If a source fails, the last good copy from the build's
+// data.json is served instead, marked carried_from. /live/udot.gif proxies the UDOT road cam.
+import { SOURCES } from "./live.js";
 
-async function liveCams() {
-  const r = await fetch(PRISM, { cf: { cacheTtl: 60, cacheEverything: true } });
-  if (!r.ok) throw new Error("prismcam " + r.status);
-  const t = await r.text();
-  const pages = JSON.parse(t.slice(t.indexOf("(") + 1, t.lastIndexOf(")"))).pages || [];
-  const now = Date.now() / 1000;
-  const out = pages.filter((p) => p.current && p.current.imagePath).map((p) => {
-    const age = Math.round((now - Number(p.current.time)) / 60);
-    return { name: p.cam.camTitle, source: "PrismCam, via powdermountain.com",
-      img: `https://storage.googleapis.com/prism-cam-${p.current.imagePath}/720.jpg`,
-      taken_local: p.current.mysqlTime, age_min: age, stale: age > 180 };
-  });
-  out.push({ name: "SR-158 at Powder Mountain, MP 11.6", source: "UDOT",
-    img: "live/udot.gif?t=" + Math.floor(now / 60) });
-  return out;
-}
+const UDOT = "https://udottraffic.utah.gov/1_devices/sr-158-mp11.gif";
+const json = (body, status = 200, maxAge = 30) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": `public, max-age=${maxAge}` } });
 
 export default {
   async fetch(req, env) {
     const { pathname } = new URL(req.url);
-    if (pathname === "/live/cams.json") {
+    const m = /^\/live\/([a-z_]+)\.json$/.exec(pathname);
+    if (m && SOURCES[m[1]]) {
+      const name = m[1];
       try {
-        return Response.json(await liveCams(), { headers: { "cache-control": "public, max-age=60" } });
+        return json({ at: new Date().toISOString(), data: await SOURCES[name]() });
       } catch (e) {
-        return Response.json({ error: String(e) }, { status: 502 });
+        const reason = String(e.message || e);
+        try {
+          const prev = await (await env.ASSETS.fetch(new URL("/data.json", req.url))).json();
+          const p = prev[name];
+          if (p && !(typeof p === "object" && !Array.isArray(p) && p.error)) {
+            const data = Array.isArray(p) ? p : { ...p, carried_from: p.carried_from || prev.generated, carry_reason: reason };
+            return json({ at: prev.generated, carried: true, reason, data });
+          }
+        } catch { /* fall through */ }
+        return json({ error: reason }, 502, 0);
       }
     }
     if (pathname === "/live/udot.gif") {
       const r = await fetch(UDOT, { cf: { cacheTtl: 60, cacheEverything: true } });
-      return new Response(r.body, { status: r.status,
-        headers: { "content-type": "image/gif", "cache-control": "public, max-age=60" } });
+      return new Response(r.body, { status: r.status, headers: { "content-type": "image/gif", "cache-control": "public, max-age=60" } });
     }
     return env.ASSETS.fetch(req);
-  },
-
-  async scheduled(_evt, env) {
-    if (!env.GH_TOKEN) { console.log("GH_TOKEN not set; skipping dispatch"); return; }
-    const r = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/update.yml/dispatches`, {
-      method: "POST",
-      headers: { authorization: `Bearer ${env.GH_TOKEN}`, accept: "application/vnd.github+json",
-        "user-agent": "powmow-snow-cron", "x-github-api-version": "2022-11-28" },
-      body: JSON.stringify({ ref: "main" }),
-    });
-    console.log("dispatch", r.status, r.status === 204 ? "" : await r.text());
   },
 };

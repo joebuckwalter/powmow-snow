@@ -2,7 +2,5 @@
   "name": "powmow-snow",
   "main": "worker.js",
   "compatibility_date": "2026-11-01",
-  "assets": { "directory": "./site", "binding": "ASSETS" },
-  // GitHub's schedule is best-effort and fired 3-4x/day; this one is reliable. See worker.js scheduled().
-  "triggers": { "crons": ["*/30 * * * *"] }
+  "assets": { "directory": "./site", "binding": "ASSETS" }
 }
