@@ -30,7 +30,9 @@ const stripHtml = (s) => (s || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")
 const lastOf = (arr, key) => { for (let i = arr.length - 1; i >= 0; i--) if (arr[i][key] != null) return arr[i]; return null; };
 
 async function get(url, ttl, kind = "text") {
-  const r = await fetch(url, { headers: { "user-agent": UA, accept: "*/*" }, cf: { cacheTtl: ttl, cacheEverything: true } });
+  // 8 s cap: an Open-Meteo TLS failure (HTTP 525) once took 40 s to surface, hanging the page.
+  const r = await fetch(url, { headers: { "user-agent": UA, accept: "*/*" }, cf: { cacheTtl: ttl, cacheEverything: true },
+    signal: AbortSignal.timeout(8000) });
   if (!r.ok) throw new Error(`HTTP ${r.status} from ${new URL(url).host}`);
   return kind === "json" ? r.json() : r.text();
 }
