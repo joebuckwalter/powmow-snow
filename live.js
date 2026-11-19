@@ -322,9 +322,15 @@ export async function cams() {
   const now = Date.now() / 1000;
   const out = pages.filter((p) => p.current && p.current.imagePath).map((p) => {
     const age = Math.round((now - Number(p.current.time)) / 60);
+    // cam_init also lists the last 24 h of frames (what the resort widget's own replay uses); every one
+    // is still served from the same bucket, so the replay needs no storage of ours.
+    const id = p.current.imagePath.split("/")[0];
     return { name: p.cam.camTitle, source: "PrismCam, via powdermountain.com",
       img: `https://storage.googleapis.com/prism-cam-${p.current.imagePath}/720.jpg`,
-      taken_local: p.current.mysqlTime, age_min: age, stale: age > 180 };
+      taken_local: p.current.mysqlTime, age_min: age, stale: age > 180,
+      frames_base: `https://storage.googleapis.com/prism-cam-${id}/`,
+      frames: (p.images || []).filter((f) => f.path && f.time).map((f) => [Number(f.time), String(f.sql).slice(5, 16).replace("-", "/"), f.path])
+        .sort((a, b) => a[0] - b[0]) };
   });
   out.push({ name: "SR-158 at Powder Mountain, MP 11.6", source: "UDOT", img: "live/udot.gif?t=" + Math.floor(now / 60) });
   return out;
