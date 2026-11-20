@@ -316,6 +316,10 @@ export async function dailySnow() {
 // -------------------------------------------------------------------- cams
 const PRISM = "https://php.prismcam.com/public/helpers/cam_init.php?cams=&pages=1762366089" +
   "&url=https%3A%2F%2Fpowdermountain.com%2Fconditions&callback=cb";
+// PrismCam sometimes drops camTitle (and the rest of the cam record) for some cams on a given request,
+// a different subset each time. Seen 2026-11-20: names came back undefined and the replay, keyed by name,
+// vanished. Fall back to the names by PrismCam id.
+const CAM_NAMES = { "107": "24-Hour Snow Stake", "109": "Lightning Ridge", "112": "Hidden Lake", "113": "Timberline Base" };
 export async function cams() {
   const t = await get(PRISM, TTL.cams);
   const pages = JSON.parse(t.slice(t.indexOf("(") + 1, t.lastIndexOf(")"))).pages || [];
@@ -325,7 +329,7 @@ export async function cams() {
     // cam_init also lists the last 24 h of frames (what the resort widget's own replay uses); every one
     // is still served from the same bucket, so the replay needs no storage of ours.
     const id = p.current.imagePath.split("/")[0];
-    return { name: p.cam.camTitle, source: "PrismCam, via powdermountain.com",
+    return { name: (p.cam && p.cam.camTitle) || CAM_NAMES[String(p.id)] || "Camera " + p.id, source: "PrismCam, via powdermountain.com",
       img: `https://storage.googleapis.com/prism-cam-${p.current.imagePath}/720.jpg`,
       taken_local: p.current.mysqlTime, age_min: age, stale: age > 180,
       frames_base: `https://storage.googleapis.com/prism-cam-${id}/`,

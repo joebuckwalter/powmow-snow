@@ -744,7 +744,8 @@ loadData().then(function (D) {
   pb.addEventListener("click", () => {
     if (!rp) return;
     rp.playing = !rp.playing;
-    if (rp.playing && rp.i >= rp.frames.length - 1) rp.show(0);  // at the end: play again from the start pb.textContent = rp.playing ? "Pause" : "Play";
+    if (rp.playing && rp.i >= rp.frames.length - 1) rp.show(0);  // at the end: play again from the start
+    pb.textContent = rp.playing ? "Pause" : "Play";
     if (!rp.playing) rp.show(rp.i);  // paused: swap in 1080 for zooming
   });
   range.addEventListener("input", () => {

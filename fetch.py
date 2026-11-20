@@ -321,18 +321,20 @@ def fetch_cams():
         ("Resort road cam (same feed)", "https://www.ixnay.net/cams/pm/s3/current.jpg", "Resort"),
     ]
     out, seen = [], set()
+    # PrismCam sometimes omits camTitle for some cams on a given request (seen 2026-11-20); same map as live.js.
+    cam_names = {"107": "24-Hour Snow Stake", "109": "Lightning Ridge", "112": "Hidden Lake", "113": "Timberline Base"}
     # Mountain cams: PrismCam widget on powdermountain.com. cam_init lists each camera's latest frame path.
     try:
         init = get("https://php.prismcam.com/public/helpers/cam_init.php?cams=&pages=1762366089"
                    "&url=https%3A%2F%2Fpowdermountain.com%2Fconditions&callback=cb")
         pages = json.loads(init[init.index("(") + 1:init.rindex(")")])["pages"]
         for p in pages:
-            cur, cam = p.get("current") or {}, p["cam"]
+            cur, cam = p.get("current") or {}, p.get("cam") or {}
             if not cur.get("imagePath"):
                 continue
             b, ct = get(f"https://storage.googleapis.com/prism-cam-{cur['imagePath']}/720.jpg", binary=True)
             age_min = round((time.time() - int(cur["time"])) / 60)
-            out.append({"name": cam["camTitle"], "source": "PrismCam, via powdermountain.com", "bytes": len(b),
+            out.append({"name": cam.get("camTitle") or cam_names.get(str(p.get("id")), f"Camera {p.get('id')}"), "source": "PrismCam, via powdermountain.com", "bytes": len(b),
                         "taken_local": cur["mysqlTime"], "age_min": age_min, "stale": age_min > 180,
                         "img": save_cam(b, f"mtn{len(out)}", "jpg")})
     except Exception as e:  # noqa: BLE001
